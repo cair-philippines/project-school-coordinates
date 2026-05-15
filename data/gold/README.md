@@ -13,5 +13,9 @@ Canonical coordinate datasets produced by the pipelines. These files are committ
 | `private_school_coordinates.xlsx` | private | Excel workbook: Metadata + Coordinates sheets |
 | `build_public_metrics.json` | public | Structured run metrics for programmatic comparison (used by `scripts/diff_metrics.py`) |
 | `build_private_metrics.json` | private | Same for private pipeline |
+| `hei_coordinates.parquet` | hei | One row per HEI campus — coordinates, sector, UII code, multi-campus flag (2,422 rows) |
+| `hei_coordinates.csv` | hei | CSV export of above |
+| `hei_coordinates.xlsx` | hei | Excel workbook: Metadata + HEI Coordinates sheets |
+| `build_hei_metrics.json` | hei | Structured run metrics for the HEI pipeline |
 
 Human-readable build reports are in `output/build_*_report.txt` (not committed).

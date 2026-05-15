@@ -59,6 +59,53 @@ File: `data/gold/public_school_id_crosswalk.parquet`
 
 ---
 
+## HEI Coordinates (Gold)
+
+File: `data/gold/hei_coordinates.parquet` (also `.csv` and `.xlsx`)
+
+One row per HEI campus. Multi-campus institutions (same UII, different locations) appear as separate rows.
+
+| Column | Description |
+|---|---|
+| `uii_code` | CHED Unique Institutional Identifier. Null for ~460 campuses with no UII in the source data. |
+| `name` | Official HEI name (CHED) |
+| `region` | Administrative region |
+| `province` | Province |
+| `city_municipality` | City or municipality |
+| `sector` | Ownership sector: `Private`, `Public SUC Main`, `Public SUC Satellite`, `Public LUC`, `OGS` |
+| `latitude` | Latitude (WGS84) |
+| `longitude` | Longitude (WGS84) |
+| `coord_status` | `valid` = within PH bounding box [4.5–21.5, 116–127]; `out_of_bounds` = outside bounds (none in current data) |
+| `is_multi_campus` | `True` if this UII code appears at more than one distinct location |
+
+**Note on duplicate UII codes**: Some institutions appear under two different UII codes in the CHED source (e.g., Stella Maris College: 10085 and 13191). This is a CHED data issue and is preserved as-is.
+
+---
+
+## HEI Programs (Silver)
+
+File: `data/silver/hei_programs.parquet`
+
+One row per HEI × program combination. 22,473 rows covering all program offerings per institution. Join to `hei_coordinates.parquet` on `(name, city_municipality)` or `uii_code` (where non-null) for spatial context.
+
+| Column | Description |
+|---|---|
+| `uii_code` | CHED Unique Institutional Identifier (nullable) |
+| `name` | Official HEI name |
+| `region` | Administrative region |
+| `province` | Province |
+| `city_municipality` | City or municipality |
+| `sector` | Ownership sector |
+| `curriculum` | Curriculum level offered by the program (e.g., `Undergraduate`) |
+| `latitude` | Latitude (WGS84) |
+| `longitude` | Longitude (WGS84) |
+| `program_level` | `Pre-baccalaureate`, `Baccalaureate`, `Post-baccalaureate`, `Master's`, `Doctorate` |
+| `discipline_group` | CHED discipline group (e.g., `Business Administration and Related`) |
+| `program_name` | PSCEd / specific program name (e.g., `Business Administration`) |
+| `uii_missing` | `True` if `uii_code` is null for this row |
+
+---
+
 ## Private School Coordinates
 
 File: `data/gold/private_school_coordinates.parquet` (also `.csv` and `.xlsx`)

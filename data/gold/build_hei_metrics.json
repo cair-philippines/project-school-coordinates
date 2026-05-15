@@ -1,0 +1,45 @@
+{
+  "coord_status": {
+    "valid": 2422
+  },
+  "generated_at": "2026-05-15T03:06:30+00:00",
+  "gold_campus_count": 2422,
+  "multi_campus_count": 8,
+  "null_uii_count": 460,
+  "pipeline": "hei",
+  "program_level": {
+    "Baccalaureate": 16422,
+    "Doctorate": 919,
+    "Master's": 2954,
+    "Post-baccalaureate": 332,
+    "Pre-baccalaureate": 1385,
+    "__null__": 461
+  },
+  "region": {
+    "BARMM": 111,
+    "CAR": 52,
+    "CARAGA": 56,
+    "NCR": 331,
+    "Region 01": 109,
+    "Region 02": 70,
+    "Region 03": 256,
+    "Region 04-A": 359,
+    "Region 04-B": 93,
+    "Region 05": 173,
+    "Region 06": 153,
+    "Region 07": 168,
+    "Region 08": 85,
+    "Region 09": 92,
+    "Region 10": 107,
+    "Region 11": 105,
+    "Region 12": 102
+  },
+  "sector": {
+    "OGS": 13,
+    "Private": 1727,
+    "Public LUC": 136,
+    "Public SUC Main": 114,
+    "Public SUC Satellite": 432
+  },
+  "silver_row_count": 22473
+}

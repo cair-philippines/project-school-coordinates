@@ -19,6 +19,7 @@ Silver is committed to the repository. Downstream consumers can read silver dire
 | `private_tosf_coords_stats.json` | sidecar for `private_tosf_coords.parquet` — Pass 1–4 cleaning counts | `modules/load_private_tosf.preprocess()` | — |
 | `psgc_crosswalk.parquet` | `frozen/SY 2024-2025 School Level Database WITH PSGC.xlsx` | `modules/load_psgc.preprocess()` | ~60,100 |
 | `enrollment.parquet` | `live/project_bukas_enrollment_2024-25.csv` | `modules/load_enrollment.preprocess()` | ~60,000 |
+| `hei_programs.parquet` | `frozen/HEIs_with_Regions_latlong_Programs_Disciplines.xlsx` | `scripts/build_hei_coordinates.py` | 22,473 |
 
 ## Regenerating
 

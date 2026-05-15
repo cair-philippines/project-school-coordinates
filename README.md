@@ -1,14 +1,14 @@
-# Unified School Coordinates — Philippine Schools
+# Unified Coordinates — Philippine Educational Institutions
 
-Reproducible pipelines that consolidate school geolocation data from multiple DepEd sources into canonical coordinates tables for Philippine public and private schools.
+Reproducible pipelines that consolidate geolocation data from DepEd and CHED sources into canonical coordinates tables for Philippine public schools, private schools, and higher education institutions (HEIs).
 
 ## Problem
 
-DepEd maintains school coordinates across multiple systems that frequently disagree — sometimes by kilometers. School IDs also change over time (e.g., when a school's curricular offering is reclassified), making it difficult to track the same physical school across datasets. There is no single authoritative source for public schools, and the only private school coordinate source is self-reported with significant quality issues.
+DepEd maintains school coordinates across multiple systems that frequently disagree — sometimes by kilometers. School IDs also change over time (e.g., when a school's curricular offering is reclassified), making it difficult to track the same physical school across datasets. There is no single authoritative source for public schools, and the only private school coordinate source is self-reported with significant quality issues. CHED HEI coordinates are scattered across program-level administrative data with no standalone coordinates file.
 
 ## Solution
 
-Two separate pipelines address the distinct challenges of each sector.
+Three separate pipelines address the distinct challenges of each sector.
 
 ### Public Schools
 
@@ -26,6 +26,13 @@ Two separate pipelines address the distinct challenges of each sector.
 2. **Merges** cleaned coordinates with the official LIS universe to ensure complete coverage
 3. **Preserves GASTPE participation flags** (ESC, SHS VP, JDVP) for policy analysis
 4. **Tracks cleaning status** so every coordinate carries its provenance
+
+### Higher Education Institutions (HEIs)
+
+1. **Normalizes** the CHED HEI dataset from a program-level Excel file into a clean silver table (one row per HEI × program)
+2. **Deduplicates** to one row per campus in the gold output, preserving multi-campus institutions as separate rows
+3. **Flags** institutions with missing UII codes and multi-campus HEIs for downstream awareness
+4. **Validates** coordinates against the Philippine bounding box
 
 ### Architecture
 
@@ -58,6 +65,12 @@ Each loader module has a `preprocess()` function (bronze → silver) and a `read
 | Private School Seats and TOSF (Oct 2025) | Self-reported via Google Forms + LIS master list | 12,011 |
 | SY 2024-2025 Enrollment Data | Universe expansion + enrollment status tagging | ~10,000 |
 
+### Higher Education Institutions
+
+| Source | Description | HEIs |
+|---|---|---|
+| CHED HEI Dataset (snapshot) | Program offerings, disciplines, and coordinates per institution | 2,422 campuses |
+
 ## Output
 
 ### Public Schools — 48,254 schools (46,537 valid · 1 fixed_swap · 1,136 suspect · 580 no coords)
@@ -80,6 +93,17 @@ Each loader module has a `preprocess()` function (bronze → silver) and a `read
 | `data/gold/private_school_coordinates.xlsx` | Excel workbook (Metadata + Private School Coordinates) |
 | `data/gold/build_private_metrics.json` | Structured run metrics for programmatic comparison |
 | `output/build_private_report.txt` | Pipeline run summary and statistics |
+
+### Higher Education Institutions — 2,422 campuses (all valid coordinates)
+
+| File | Description |
+|---|---|
+| `data/gold/hei_coordinates.parquet` | One row per HEI campus with coordinates and sector |
+| `data/gold/hei_coordinates.csv` | CSV export |
+| `data/gold/hei_coordinates.xlsx` | Excel workbook (Metadata + HEI Coordinates) |
+| `data/gold/build_hei_metrics.json` | Structured run metrics for programmatic comparison |
+| `data/silver/hei_programs.parquet` | Full HEI × program mapping (22,473 rows) — silver layer |
+| `output/build_hei_report.txt` | Pipeline run summary and statistics |
 
 ### Schemas
 
@@ -136,6 +160,7 @@ project_coordinates/
 │   ├── build.py                          # Unified entry point (--stage=all|silver|gold)
 │   ├── build_coordinates.py              # Public pipeline (internal module, invoked by build.py)
 │   ├── build_private_coordinates.py      # Private pipeline (internal module, invoked by build.py)
+│   ├── build_hei_coordinates.py          # HEI pipeline (bronze → silver → gold)
 │   ├── diff_metrics.py                   # Diff two build metrics JSON files
 │   └── rebuild_and_verify.sh             # Wrapper: rebuild + diff + tests + PASS/REGRESSION summary
 ├── modules/
@@ -177,6 +202,9 @@ project_coordinates/
 ### Private Schools
 - **[Pipeline Plan](documentation/private_pipeline_plan.md)** — objective, source description, coordinate cleaning strategy, output schema, and design decisions.
 - **[Technical Notes](documentation/private_technical_notes.md)** — comprehensive processing details: ingestion, four-pass coordinate cleaning, merge logic, validation results, and known limitations.
+
+### Higher Education Institutions
+- **[Schemas](documentation/schemas.md)** — column-by-column reference for `hei_coordinates.parquet` (gold) and `hei_programs.parquet` (silver).
 
 ## See also
 
