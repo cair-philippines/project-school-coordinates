@@ -63,22 +63,31 @@ File: `data/gold/public_school_id_crosswalk.parquet`
 
 File: `data/gold/hei_coordinates.parquet` (also `.csv` and `.xlsx`)
 
-One row per HEI campus. Multi-campus institutions (same UII, different locations) appear as separate rows.
+One row per HEI campus. Multi-campus institutions (same UII, different locations) appear as separate rows. Locality columns are harmonized to DepEd naming conventions; original CHED strings are preserved in `old_*` columns.
 
 | Column | Description |
 |---|---|
 | `uii_code` | CHED Unique Institutional Identifier. Null for ~460 campuses with no UII in the source data. |
 | `name` | Official HEI name (CHED) |
-| `region` | Administrative region |
-| `province` | Province |
-| `city_municipality` | City or municipality |
+| `region` | Administrative region — harmonized to DepEd Roman numeral convention (e.g., `Region I`, `MIMAROPA`) |
+| `old_region` | Original CHED region string before harmonization (e.g., `Region 01`, `Region 04-B`) |
+| `province` | Province — harmonized to DepEd naming (e.g., `MOUNTAIN PROVINCE`, `NORTH COTABATO`). Null for campuses whose CHED source had a region name in this field. |
+| `old_province` | Original CHED province string before harmonization |
+| `city_municipality` | City or municipality — trailing ` MUNICIPALITY` suffix stripped to match DepEd convention |
+| `old_city_municipality` | Original CHED city/municipality string before harmonization |
 | `sector` | Ownership sector: `Private`, `Public SUC Main`, `Public SUC Satellite`, `Public LUC`, `OGS` |
 | `latitude` | Latitude (WGS84) |
 | `longitude` | Longitude (WGS84) |
 | `coord_status` | `valid` = within PH bounding box [4.5–21.5, 116–127]; `out_of_bounds` = outside bounds (none in current data) |
 | `is_multi_campus` | `True` if this UII code appears at more than one distinct location |
+| `psgc_observed_region` | PSGC region code from point-in-polygon against PSA barangay shapefile |
+| `psgc_observed_province` | PSGC province code from point-in-polygon |
+| `psgc_observed_municity` | PSGC municipality/city code (7-digit) from point-in-polygon |
+| `psgc_observed_barangay` | PSGC barangay code from point-in-polygon. Null for ~4 campuses outside all barangay polygons. |
 
-**Note on duplicate UII codes**: Some institutions appear under two different UII codes in the CHED source (e.g., Stella Maris College: 10085 and 13191). This is a CHED data issue and is preserved as-is.
+**PSGC note**: All PSGC codes are spatially observed — no administrative PSGC crosswalk exists for HEIs. There is no `psgc_validation` column since there is no claimed code to compare against. Downstream joins across basic and higher education should use `psgc_observed_municity` (HEI) vs `psgc_observed_municity` (DepEd), both derived from the same shapefile.
+
+**Duplicate UII note**: Some institutions appear under two different UII codes in the CHED source (e.g., Stella Maris College: 10085 and 13191). This is a CHED data issue and is preserved as-is.
 
 ---
 
@@ -92,9 +101,12 @@ One row per HEI × program combination. 22,473 rows covering all program offerin
 |---|---|
 | `uii_code` | CHED Unique Institutional Identifier (nullable) |
 | `name` | Official HEI name |
-| `region` | Administrative region |
-| `province` | Province |
-| `city_municipality` | City or municipality |
+| `region` | Administrative region — harmonized to DepEd Roman numeral convention |
+| `old_region` | Original CHED region string before harmonization |
+| `province` | Province — harmonized to DepEd naming. Null where CHED had a region name in the province field. |
+| `old_province` | Original CHED province string before harmonization |
+| `city_municipality` | City or municipality — trailing ` MUNICIPALITY` suffix stripped |
+| `old_city_municipality` | Original CHED city/municipality string before harmonization |
 | `sector` | Ownership sector |
 | `curriculum` | Curriculum level offered by the program (e.g., `Undergraduate`) |
 | `latitude` | Latitude (WGS84) |
