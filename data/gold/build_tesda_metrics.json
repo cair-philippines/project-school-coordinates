@@ -1,0 +1,61 @@
+{
+  "classification": {
+    "Enterprise": 40,
+    "Farm School": 727,
+    "GOCC/GFI": 1,
+    "HEI": 453,
+    "LGU": 184,
+    "LUC": 29,
+    "NGA": 22,
+    "NGO": 12,
+    "SUC": 52,
+    "TTI": 278,
+    "TVI": 3636,
+    "__null__": 2573
+  },
+  "coord_status": {
+    "null_coords": 8,
+    "out_of_bounds": 108,
+    "valid": 7891
+  },
+  "generated_at": "2026-06-22T03:26:08+00:00",
+  "gold_institution_count": 8007,
+  "institution_classification": {
+    "Assessment Center Only": 925,
+    "Both": 3328,
+    "Provider Only": 3754
+  },
+  "locality_harmonization": {
+    "city_municipality_changed": 2573,
+    "province_changed": 1140,
+    "region_changed": 8007
+  },
+  "pipeline": "tesda",
+  "psgc_matched": 7750,
+  "psgc_outside_polygons": 257,
+  "region": {
+    "BARMM": 283,
+    "CAR": 228,
+    "MIMAROPA": 293,
+    "NCR": 933,
+    "Region I": 455,
+    "Region II": 285,
+    "Region III": 858,
+    "Region IV-A": 965,
+    "Region IX": 318,
+    "Region V": 500,
+    "Region VI": 407,
+    "Region VII": 547,
+    "Region VIII": 401,
+    "Region X": 500,
+    "Region XI": 392,
+    "Region XII": 388,
+    "Region XIII": 254
+  },
+  "silver_row_count": 31577,
+  "type_of_institution": {
+    "Private": 4868,
+    "Public": 566,
+    "__null__": 2573
+  }
+}

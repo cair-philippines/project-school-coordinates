@@ -1,14 +1,14 @@
 # Unified Coordinates — Philippine Educational Institutions
 
-Reproducible pipelines that consolidate geolocation data from DepEd and CHED sources into canonical coordinates tables for Philippine public schools, private schools, and higher education institutions (HEIs).
+Reproducible pipelines that consolidate geolocation data from DepEd, CHED, and TESDA sources into canonical coordinates tables for Philippine public schools, private schools, higher education institutions (HEIs), and TESDA training and assessment institutions.
 
 ## Problem
 
-DepEd maintains school coordinates across multiple systems that frequently disagree — sometimes by kilometers. School IDs also change over time (e.g., when a school's curricular offering is reclassified), making it difficult to track the same physical school across datasets. There is no single authoritative source for public schools, and the only private school coordinate source is self-reported with significant quality issues. CHED HEI coordinates are scattered across program-level administrative data with no standalone coordinates file.
+DepEd maintains school coordinates across multiple systems that frequently disagree — sometimes by kilometers. School IDs also change over time (e.g., when a school's curricular offering is reclassified), making it difficult to track the same physical school across datasets. There is no single authoritative source for public schools, and the only private school coordinate source is self-reported with significant quality issues. CHED HEI coordinates are scattered across program-level administrative data with no standalone coordinates file. TESDA training and assessment institutions have no unique institutional IDs in the source data, and their locality naming diverges from PSA PSGC conventions.
 
 ## Solution
 
-Three separate pipelines address the distinct challenges of each sector.
+Four separate pipelines address the distinct challenges of each sector.
 
 ### Public Schools
 
@@ -33,6 +33,15 @@ Three separate pipelines address the distinct challenges of each sector.
 2. **Deduplicates** to one row per campus in the gold output, preserving multi-campus institutions as separate rows
 3. **Flags** institutions with missing UII codes and multi-campus HEIs for downstream awareness
 4. **Validates** coordinates against the Philippine bounding box
+
+### TESDA Training and Assessment Institutions
+
+1. **Normalizes** the TESDA assessment centers dataset from a program-level Excel file into a clean silver table (one row per institution × program)
+2. **Assigns stable institution IDs** (`TESDA00001`–style) since the source has no unique institution identifier
+3. **Harmonizes locality naming** to DepEd/PSA conventions: strips region descriptor suffixes, fixes province name mismatches, nulls NCR district groupings (CaMaNaVa, PasMak, etc.) that are not PSA administrative units
+4. **Auto-corrects reversed lat/lon pairs** (a systematic data-entry error in the source affecting ~209 institutions)
+5. **Deduplicates** to one row per institution in the gold output
+6. **Attaches PSGC codes** at all four admin levels via point-in-polygon against the PSA barangay shapefile
 
 ### Architecture
 
@@ -71,6 +80,12 @@ Each loader module has a `preprocess()` function (bronze → silver) and a `read
 |---|---|---|
 | CHED HEI Dataset (snapshot) | Program offerings, disciplines, and coordinates per institution | 2,422 campuses |
 
+### TESDA Training and Assessment Institutions
+
+| Source | Description | Institutions |
+|---|---|---|
+| TESDA Assessment Centers Dataset (snapshot) | Program accreditations, institution classification (Training/Assessment/Both), and coordinates per institution | 8,007 institutions |
+
 ## Output
 
 ### Public Schools — 48,254 schools (46,537 valid · 1 fixed_swap · 1,136 suspect · 580 no coords)
@@ -104,6 +119,17 @@ Each loader module has a `preprocess()` function (bronze → silver) and a `read
 | `data/gold/build_hei_metrics.json` | Structured run metrics for programmatic comparison |
 | `data/silver/hei_programs.parquet` | Full HEI × program mapping (22,473 rows) — silver layer |
 | `output/build_hei_report.txt` | Pipeline run summary and statistics |
+
+### TESDA Institutions — 8,007 institutions (7,891 valid · 108 out-of-bounds · 8 null coords)
+
+| File | Description |
+|---|---|
+| `data/gold/tesda_coordinates.parquet` | One row per TESDA institution with coordinates and PSGC |
+| `data/gold/tesda_coordinates.csv` | CSV export |
+| `data/gold/tesda_coordinates.xlsx` | Excel workbook (Metadata + TESDA Coordinates) |
+| `data/gold/build_tesda_metrics.json` | Structured run metrics for programmatic comparison |
+| `data/silver/tesda_programs.parquet` | Full institution × program mapping (31,577 rows) — silver layer |
+| `output/build_tesda_report.txt` | Pipeline run summary and statistics |
 
 ### Schemas
 
@@ -161,6 +187,7 @@ project_coordinates/
 │   ├── build_coordinates.py              # Public pipeline (internal module, invoked by build.py)
 │   ├── build_private_coordinates.py      # Private pipeline (internal module, invoked by build.py)
 │   ├── build_hei_coordinates.py          # HEI pipeline (bronze → silver → gold)
+│   ├── build_tesda_coordinates.py        # TESDA pipeline (bronze → silver → gold)
 │   ├── diff_metrics.py                   # Diff two build metrics JSON files
 │   └── rebuild_and_verify.sh             # Wrapper: rebuild + diff + tests + PASS/REGRESSION summary
 ├── modules/
@@ -205,6 +232,9 @@ project_coordinates/
 
 ### Higher Education Institutions
 - **[Schemas](documentation/schemas.md)** — column-by-column reference for `hei_coordinates.parquet` (gold) and `hei_programs.parquet` (silver).
+
+### TESDA Training and Assessment Institutions
+- **[Schemas](documentation/schemas.md)** — column-by-column reference for `tesda_coordinates.parquet` (gold) and `tesda_programs.parquet` (silver).
 
 ## See also
 

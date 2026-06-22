@@ -17,5 +17,9 @@ Canonical coordinate datasets produced by the pipelines. These files are committ
 | `hei_coordinates.csv` | hei | CSV export of above |
 | `hei_coordinates.xlsx` | hei | Excel workbook: Metadata + HEI Coordinates sheets |
 | `build_hei_metrics.json` | hei | Structured run metrics for the HEI pipeline |
+| `tesda_coordinates.parquet` | tesda | One row per TESDA institution — coordinates, classification, institution role, PSGC (8,007 rows) |
+| `tesda_coordinates.csv` | tesda | CSV export of above |
+| `tesda_coordinates.xlsx` | tesda | Excel workbook: Metadata + TESDA Coordinates sheets |
+| `build_tesda_metrics.json` | tesda | Structured run metrics for the TESDA pipeline |
 
 Human-readable build reports are in `output/build_*_report.txt` (not committed).

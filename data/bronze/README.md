@@ -1,6 +1,6 @@
-# Bronze — Raw DepEd Source Files
+# Bronze — Raw Source Files
 
-This is the **bronze layer** of the medallion architecture. Files here are original DepEd source files, preserved with their shipped filenames. Not committed to the repository (large, externally sourced). Drop new files here and the preprocessing stage will normalize them into `data/silver/`.
+This is the **bronze layer** of the medallion architecture. Files here are original source files from DepEd, CHED, and TESDA, preserved with their shipped filenames. Not committed to the repository (large, externally sourced). Drop new files here and the preprocessing stage will normalize them into `data/silver/`.
 
 ## Layout
 

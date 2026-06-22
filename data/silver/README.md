@@ -20,6 +20,7 @@ Silver is committed to the repository. Downstream consumers can read silver dire
 | `psgc_crosswalk.parquet` | `frozen/SY 2024-2025 School Level Database WITH PSGC.xlsx` | `modules/load_psgc.preprocess()` | ~60,100 |
 | `enrollment.parquet` | `live/project_bukas_enrollment_2024-25.csv` | `modules/load_enrollment.preprocess()` | ~60,000 |
 | `hei_programs.parquet` | `frozen/HEIs_with_Regions_latlong_Programs_Disciplines.xlsx` | `scripts/build_hei_coordinates.py` | 22,473 |
+| `tesda_programs.parquet` | `frozen/TESDA Assessment Centers and Assessors.xlsx` | `scripts/build_tesda_coordinates.py` | 31,577 |
 
 ## Regenerating
 

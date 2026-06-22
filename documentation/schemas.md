@@ -85,7 +85,7 @@ One row per HEI campus. Multi-campus institutions (same UII, different locations
 | `psgc_observed_municity` | PSGC municipality/city code (7-digit) from point-in-polygon |
 | `psgc_observed_barangay` | PSGC barangay code from point-in-polygon. Null for ~4 campuses outside all barangay polygons. |
 
-**PSGC note**: All PSGC codes are spatially observed — no administrative PSGC crosswalk exists for HEIs. There is no `psgc_validation` column since there is no claimed code to compare against. Downstream joins across basic and higher education should use `psgc_observed_municity` (HEI) vs `psgc_observed_municity` (DepEd), both derived from the same shapefile.
+**PSGC note**: All PSGC codes are spatially observed — no administrative PSGC crosswalk exists for HEIs. There is no `psgc_validation` column since there is no claimed code to compare against. Downstream joins across sectors: use `psgc_observed_municity` (HEI) vs `psgc_municity.str[:7]` (DepEd basic ed), or `psgc_observed_municity` (HEI) vs `psgc_observed_municity` (TESDA).
 
 **Duplicate UII note**: Some institutions appear under two different UII codes in the CHED source (e.g., Stella Maris College: 10085 and 13191). This is a CHED data issue and is preserved as-is.
 
@@ -115,6 +115,75 @@ One row per HEI × program combination. 22,473 rows covering all program offerin
 | `discipline_group` | CHED discipline group (e.g., `Business Administration and Related`) |
 | `program_name` | PSCEd / specific program name (e.g., `Business Administration`) |
 | `uii_missing` | `True` if `uii_code` is null for this row |
+
+---
+
+## TESDA Coordinates (Gold)
+
+File: `data/gold/tesda_coordinates.parquet` (also `.csv` and `.xlsx`)
+
+One row per TESDA training and assessment institution. Locality columns are harmonized to DepEd/PSA PSGC naming conventions; original TESDA strings are preserved in `old_*` columns. The source file has no unique institution identifier — `tesda_inst_id` is assigned by the pipeline.
+
+| Column | Description |
+|---|---|
+| `tesda_inst_id` | Pipeline-assigned institution ID (`TESDA00001`–`TESDA08007`). The source `Unique ID` column is entirely null. |
+| `name` | Institution name (TESDA source: NAME OF INSTITUTION) |
+| `type_of_institution` | `Private` or `Public` (normalized to title case; null for ~2,573 institutions missing this field in the source) |
+| `classification` | Institution type: `TVI` (TVET Institution), `TTI`, `HEI`, `Farm School`, `LGU`, `SUC`, `LUC`, `Enterprise`, `NGA`, `NGO`, `GOCC/GFI`. Null for ~2,573 institutions missing this field in the source. |
+| `institution_classification` | `Both` = Training + Assessment provider; `Provider Only` = Training only; `Assessment Center Only` = Assessment only |
+| `address` | Physical address string from source |
+| `latitude` | Latitude (WGS84). Null for ~8 institutions. Auto-corrected if original source had lat/lon reversed. |
+| `longitude` | Longitude (WGS84). Null for ~8 institutions. Auto-corrected if original source had lat/lon reversed. |
+| `coord_status` | `valid` = within PH bounding box [4.5–21.5, 116–127] (includes auto-corrected swaps); `null_coords` = missing lat/lon; `out_of_bounds` = outside bounds and not recoverable by swap |
+| `region` | Administrative region — harmonized to DepEd convention (e.g., `Region I`, `MIMAROPA`, `CAR`, `NCR`, `BARMM`) |
+| `old_region` | Original TESDA region string before harmonization (e.g., `Region I - Ilocos`, `Cordillera Administrative Region (CAR)`) |
+| `province` | Province — harmonized to DepEd/PSA naming. Null for NCR (PSA has no province layer for NCR) and for independent component cities listed as province in Region IX. Backfilled from shapefile `ADM2_EN` after PSGC spatial lookup. |
+| `old_province` | Original TESDA province string before harmonization (e.g., `Compostela Valley`, `CaMaNaVa`, `Tawi-tawi`) |
+| `city_municipality` | City or municipality name (matches DepEd convention; no suffix normalization applied) |
+| `old_city_municipality` | Same as `city_municipality` — retained for pipeline consistency with HEI and public pipelines |
+| `district` | Congressional district |
+| `municipality_class` | Municipal income classification (1st, 2nd, etc.) |
+| `psgc_observed_region` | PSGC region code from point-in-polygon against PSA barangay shapefile |
+| `psgc_observed_province` | PSGC province code from point-in-polygon |
+| `psgc_observed_municity` | PSGC municipality/city code (7-digit) from point-in-polygon |
+| `psgc_observed_barangay` | PSGC barangay code from point-in-polygon. Null for institutions outside all barangay polygons. |
+
+**PSGC note**: All PSGC codes are spatially observed — no administrative PSGC crosswalk exists for TESDA institutions. Downstream joins across sectors: use `psgc_observed_municity` (TESDA) against `psgc_observed_municity` (HEI) or `psgc_municity.str[:7]` (DepEd basic ed).
+
+**Coordinate quality note**: ~209 institutions in the source had latitude and longitude entered in reversed columns. The pipeline detects and corrects these automatically (lat in [116–127] and lon in [4.5–21.5] → swap). Corrected institutions appear as `coord_status = valid`. A further 108 institutions have coordinates outside PH bounds that are not recoverable by swap.
+
+**Null classification note**: ~2,573 institutions have no `classification` or `type_of_institution` in the source file. These are legitimate TESDA-accredited institutions (they have valid programs and `institution_classification`) — the source data simply does not fill these fields for those records.
+
+---
+
+## TESDA Programs (Silver)
+
+File: `data/silver/tesda_programs.parquet`
+
+One row per TESDA institution × program accreditation combination. 31,577 rows. Join to `tesda_coordinates.parquet` on `tesda_inst_id` for spatial context.
+
+| Column | Description |
+|---|---|
+| `tesda_inst_id` | Pipeline-assigned institution ID (links to gold) |
+| `name` | Institution name |
+| `region` | Administrative region — harmonized to DepEd convention |
+| `old_region` | Original TESDA region string before harmonization |
+| `province` | Province — harmonized to DepEd/PSA naming |
+| `old_province` | Original TESDA province string before harmonization |
+| `city_municipality` | City or municipality |
+| `old_city_municipality` | Original TESDA municipality string (unchanged; retained for consistency) |
+| `district` | Congressional district |
+| `municipality_class` | Municipal income classification |
+| `type_of_institution` | `Private` or `Public` (nullable) |
+| `classification` | Institution type: TVI, TTI, HEI, Farm School, LGU, SUC, LUC, Enterprise, NGA, NGO, GOCC/GFI (nullable) |
+| `institution_classification` | Both / Provider Only / Assessment Center Only |
+| `address` | Physical address |
+| `latitude` | Latitude (WGS84; auto-corrected for reversed pairs) |
+| `longitude` | Longitude (WGS84; auto-corrected for reversed pairs) |
+| `sector` | TESDA program sector (e.g., `Tourism`, `Construction`, `Agriculture, Forestry and Fishery`) |
+| `program` | Specific program name and NC level (e.g., `Cookery NC II`) |
+| `date_issued` | Accreditation date issued (string, source format: `November 6, 2023`) |
+| `expiration_date` | Accreditation expiration date (string) |
 
 ---
 
