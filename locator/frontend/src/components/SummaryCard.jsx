@@ -180,7 +180,7 @@ export default function SummaryCard({ activeFilters }) {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <Stat icon={Building2} label="Total Schools" value={summary.total.toLocaleString()} color="text-[var(--primary)]" />
+        <Stat icon={Building2} label="Total" value={summary.total.toLocaleString()} color="text-[var(--primary)]" />
         <Stat
           icon={MapPin}
           label="With Coords"
@@ -190,16 +190,32 @@ export default function SummaryCard({ activeFilters }) {
         />
         <Stat
           icon={Building2}
-          label="Public"
+          label="DepEd Public"
           value={summary.public.toLocaleString()}
           color="text-green-600"
         />
         <Stat
           icon={Building2}
-          label="Private"
+          label="DepEd Private"
           value={summary.private.toLocaleString()}
           color="text-blue-600"
         />
+        {summary.ched > 0 && (
+          <Stat
+            icon={GraduationCap}
+            label="CHED"
+            value={summary.ched.toLocaleString()}
+            color="text-violet-600"
+          />
+        )}
+        {summary.tesda > 0 && (
+          <Stat
+            icon={BarChart3}
+            label="TESDA"
+            value={summary.tesda.toLocaleString()}
+            color="text-orange-600"
+          />
+        )}
       </div>
 
       <StatusBar statuses={summary.coord_status} />

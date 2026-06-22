@@ -12,6 +12,18 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
+const SECTOR_COLORS = {
+  public: "#22c55e",       // DepEd public — green
+  private: "#3b82f6",      // DepEd private — blue
+  ched_public: "#7c3aed",  // CHED public — violet
+  ched_private: "#a78bfa", // CHED private — light violet
+  tesda: "#f97316",        // TESDA — orange
+};
+
+function sectorColor(school) {
+  return SECTOR_COLORS[school.sector] || "#9ca3b8";
+}
+
 const PH_CENTER = [12.5, 122.0];
 const PH_ZOOM = 6;
 
@@ -35,7 +47,7 @@ const PH_ZOOM = 6;
  *   Gray dot
  */
 function createIcon(school) {
-  const sectorColor = school.sector === "public" ? "#22c55e" : "#3b82f6";
+  const color = sectorColor(school);
   const status = school.coord_status;
   const reason = school.coord_rejection_reason;
 
@@ -47,7 +59,7 @@ function createIcon(school) {
         <div style="
           position:absolute; top:2px; left:2px;
           width:12px; height:12px;
-          background:${sectorColor};
+          background:${color};
           border:2px solid white;
           border-radius:50%;
           box-shadow:0 2px 4px rgba(0,0,0,0.3);
@@ -77,7 +89,7 @@ function createIcon(school) {
         <div style="
           position:absolute; top:2px; left:2px;
           width:12px; height:12px;
-          background:${sectorColor};
+          background:${color};
           border:2px solid white;
           border-radius:50%;
           box-shadow:0 2px 4px rgba(0,0,0,0.3);
@@ -105,7 +117,7 @@ function createIcon(school) {
         <div style="
           position:absolute; top:2px; left:2px;
           width:12px; height:12px;
-          background:${sectorColor};
+          background:${color};
           border:2px solid white;
           border-radius:50%;
           box-shadow:0 2px 4px rgba(0,0,0,0.3);
@@ -131,7 +143,7 @@ function createIcon(school) {
       className: "",
       html: `<div style="
         width:12px; height:12px;
-        background:${sectorColor};
+        background:${color};
         border:2px solid white;
         border-radius:50%;
         box-shadow:0 2px 4px rgba(0,0,0,0.3);
@@ -283,21 +295,25 @@ const MAP_MARKER_CAP = 3000;
 function capMarkers(withCoords) {
   if (withCoords.length <= MAP_MARKER_CAP) return withCoords;
 
-  const pub = withCoords.filter((s) => s.sector === "public");
-  const priv = withCoords.filter((s) => s.sector === "private");
+  const bySector = {};
+  for (const s of withCoords) {
+    const sec = s.sector || "unknown";
+    (bySector[sec] = bySector[sec] || []).push(s);
+  }
+
   const total = withCoords.length;
-
-  const pubSlots = Math.round((pub.length / total) * MAP_MARKER_CAP);
-  const privSlots = MAP_MARKER_CAP - pubSlots;
-
-  // Evenly sample from each sector
   const sample = (arr, n) => {
     if (arr.length <= n) return arr;
     const step = arr.length / n;
     return Array.from({ length: n }, (_, i) => arr[Math.floor(i * step)]);
   };
 
-  return [...sample(pub, pubSlots), ...sample(priv, privSlots)];
+  const result = [];
+  for (const arr of Object.values(bySector)) {
+    const slots = Math.max(1, Math.round((arr.length / total) * MAP_MARKER_CAP));
+    result.push(...sample(arr, slots));
+  }
+  return result;
 }
 
 /**
@@ -306,12 +322,10 @@ function capMarkers(withCoords) {
  */
 function createSelectedIcon(school) {
   const status = school.coord_status;
-  let color;
-  if (status === "valid" || status === "fixed_swap" || status === "suspect") {
-    color = school.sector === "public" ? "#22c55e" : "#3b82f6";
-  } else {
-    color = "#9ca3b8";
-  }
+  const color =
+    status === "valid" || status === "fixed_swap" || status === "suspect"
+      ? sectorColor(school)
+      : "#9ca3b8";
 
   return L.divIcon({
     className: "",
@@ -409,12 +423,12 @@ export default function SchoolMap({ schools, selectedSchool, onOpenDetail, mode 
               <Popup className="custom-popup">
                 <div className="p-3">
                   <div className="font-semibold text-sm text-gray-900 leading-tight">
-                    {school.school_name || "Unnamed School"}
+                    {school.school_name || "Unnamed"}
                   </div>
                   <div className="mt-1 text-xs text-gray-500">
                     {school.school_id} &middot;{" "}
-                    <span className={school.sector === "public" ? "text-blue-600" : "text-pink-600"}>
-                      {school.sector}
+                    <span style={{ color: sectorColor(school) }}>
+                      {school.sector?.replace("_", " ")}
                     </span>
                   </div>
                   <div className="mt-2 text-xs text-gray-600 space-y-0.5">

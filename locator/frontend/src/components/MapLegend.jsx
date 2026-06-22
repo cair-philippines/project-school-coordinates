@@ -3,16 +3,30 @@ import { Info, ChevronDown } from "lucide-react";
 
 const LEGEND_ITEMS = [
   {
-    visual: (
-      <span className="inline-block h-2.5 w-2.5 rounded-full bg-green-500" />
-    ),
-    label: "Public — validated",
+    visual: <span className="inline-block h-2.5 w-2.5 rounded-full bg-green-500" />,
+    label: "DepEd Public",
+  },
+  {
+    visual: <span className="inline-block h-2.5 w-2.5 rounded-full bg-blue-500" />,
+    label: "DepEd Private",
   },
   {
     visual: (
-      <span className="inline-block h-2.5 w-2.5 rounded-full bg-blue-500" />
+      <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: "#7c3aed" }} />
     ),
-    label: "Private — validated",
+    label: "CHED Public / SUC / Gov",
+  },
+  {
+    visual: (
+      <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: "#a78bfa" }} />
+    ),
+    label: "CHED Private",
+  },
+  {
+    visual: (
+      <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: "#f97316" }} />
+    ),
+    label: "TESDA",
   },
   {
     visual: (
@@ -47,9 +61,7 @@ const LEGEND_ITEMS = [
     label: "Known fake coordinate",
   },
   {
-    visual: (
-      <span className="inline-block h-2.5 w-2.5 rounded-full bg-gray-400" />
-    ),
+    visual: <span className="inline-block h-2.5 w-2.5 rounded-full bg-gray-400" />,
     label: "Unknown status",
   },
 ];

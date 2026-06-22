@@ -1,6 +1,6 @@
-"""School Locator API — FastAPI backend.
+"""Institution Locator API — FastAPI backend.
 
-Loads public and private school coordinate datasets into memory at startup
+Loads DepEd, CHED, and TESDA coordinate datasets into memory at startup
 and serves search, filter, and detail endpoints.
 """
 
@@ -36,7 +36,7 @@ def startup():
     data_dir = local_data if local_data.exists() else docker_data
     schools = data_loader.load_all(data_dir)
     filter_options = data_loader.build_filter_options(schools)
-    print(f"Loaded {len(schools):,} schools")
+    print(f"Loaded {len(schools):,} institutions")
 
 
 # ---------------------------------------------------------------------------
@@ -165,13 +165,17 @@ def get_filters(
 
 @app.get("/api/stats")
 def get_stats():
-    """Summary statistics."""
+    """Summary statistics across all sectors."""
     public = [s for s in schools if s["sector"] == "public"]
     private = [s for s in schools if s["sector"] == "private"]
+    ched = [s for s in schools if s["sector"] in ("ched_public", "ched_private")]
+    tesda = [s for s in schools if s["sector"] == "tesda"]
     return {
         "total_schools": len(schools),
         "public_schools": len(public),
         "private_schools": len(private),
+        "ched_institutions": len(ched),
+        "tesda_institutions": len(tesda),
         "with_coordinates": sum(1 for s in schools if s.get("latitude") is not None),
         "active_enrollment": sum(1 for s in schools if s.get("enrollment_status") == "active"),
     }
@@ -202,22 +206,24 @@ def get_summary(
 
     public = [s for s in results if s["sector"] == "public"]
     private = [s for s in results if s["sector"] == "private"]
+    ched = [s for s in results if s["sector"] in ("ched_public", "ched_private")]
+    tesda = [s for s in results if s["sector"] == "tesda"]
     with_coords = sum(1 for s in results if s.get("latitude") is not None)
     active = sum(1 for s in results if s.get("enrollment_status") == "active")
     no_enrollment = sum(1 for s in results if s.get("enrollment_status") == "no_enrollment_reported")
 
-    # Coordinate source breakdown (public schools)
+    # Coordinate source breakdown (DepEd public schools)
     coord_sources = {}
     for s in public:
         src = s.get("coord_source") or "none"
         coord_sources[src] = coord_sources.get(src, 0) + 1
 
-    # GASTPE (private schools)
+    # GASTPE (DepEd private schools)
     esc = sum(1 for s in private if s.get("esc_participating") == 1)
     shsvp = sum(1 for s in private if s.get("shsvp_participating") == 1)
     jdvp = sum(1 for s in private if s.get("jdvp_participating") == 1)
 
-    # Coord status breakdown (all schools)
+    # Coord status breakdown (all institutions)
     coord_status = {}
     for s in results:
         st = s.get("coord_status") or "unknown"
@@ -227,6 +233,8 @@ def get_summary(
         "total": total,
         "public": len(public),
         "private": len(private),
+        "ched": len(ched),
+        "tesda": len(tesda),
         "with_coordinates": with_coords,
         "without_coordinates": total - with_coords,
         "coverage_pct": round(100 * with_coords / total, 1) if total > 0 else 0,

@@ -9,6 +9,9 @@ import {
   CheckCircle2,
   AlertCircle,
   ArrowRight,
+  BookOpen,
+  Wrench,
+  Building2,
 } from "lucide-react";
 
 function Badge({ children, variant = "default" }) {
@@ -19,9 +22,11 @@ function Badge({ children, variant = "default" }) {
     green: "bg-green-50 text-green-700",
     amber: "bg-amber-50 text-amber-700",
     red: "bg-red-50 text-red-700",
+    violet: "bg-violet-50 text-violet-700",
+    orange: "bg-orange-50 text-orange-700",
   };
   return (
-    <span className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full ${styles[variant]}`}>
+    <span className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full ${styles[variant] || styles.default}`}>
       {children}
     </span>
   );
@@ -73,12 +78,46 @@ const MONITORING_SUB_LABELS = {
   "New coordinates": "Validator found new coordinates from external sources",
 };
 
+function sectorLabel(sector) {
+  const labels = {
+    public: "DepEd Public",
+    private: "DepEd Private",
+    ched_public: "CHED Public",
+    ched_private: "CHED Private",
+    tesda: "TESDA",
+  };
+  return labels[sector] || sector;
+}
+
+function sectorBadgeVariant(sector) {
+  if (sector === "public") return "green";
+  if (sector === "private") return "blue";
+  if (sector === "ched_public" || sector === "ched_private") return "violet";
+  if (sector === "tesda") return "orange";
+  return "default";
+}
+
+function TagList({ items }) {
+  if (!items || items.length === 0) return (
+    <div className="text-xs text-[var(--muted-foreground)]">None listed</div>
+  );
+  return (
+    <div className="flex flex-wrap gap-1">
+      {items.map((item) => (
+        <Badge key={item} variant="default">{item}</Badge>
+      ))}
+    </div>
+  );
+}
+
 export default function SchoolDetail({ school, onClose }) {
   if (!school) return null;
 
+  const isDepEd = school.sector === "public" || school.sector === "private";
   const isPublic = school.sector === "public";
+  const isCHED = school.sector === "ched_public" || school.sector === "ched_private";
+  const isTESDA = school.sector === "tesda";
   const hasCoords = school.latitude != null && school.longitude != null;
-  const coordSource = school.coord_source || school.coord_status;
   const trust = SOURCE_TRUST[school.coord_source] || null;
 
   return (
@@ -87,27 +126,34 @@ export default function SchoolDetail({ school, onClose }) {
       <div className="shrink-0 p-4 border-b border-[var(--border)] bg-gradient-to-b from-[var(--accent)] to-[var(--card)]">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <Badge variant={isPublic ? "blue" : "pink"}>
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <Badge variant={sectorBadgeVariant(school.sector)}>
                 <School className="h-3 w-3" />
-                {school.sector}
+                {sectorLabel(school.sector)}
               </Badge>
-              {school.enrollment_status === "active" ? (
-                <Badge variant="green">
-                  <CheckCircle2 className="h-3 w-3" />active
-                </Badge>
-              ) : (
-                <Badge variant="amber">
-                  <AlertCircle className="h-3 w-3" />no enrollment
-                </Badge>
+              {isDepEd && (
+                school.enrollment_status === "active" ? (
+                  <Badge variant="green">
+                    <CheckCircle2 className="h-3 w-3" />active
+                  </Badge>
+                ) : (
+                  <Badge variant="amber">
+                    <AlertCircle className="h-3 w-3" />no enrollment
+                  </Badge>
+                )
               )}
             </div>
             <h2 className="font-semibold text-base leading-tight">
-              {school.school_name || "Unnamed School"}
+              {school.school_name || "Unnamed"}
             </h2>
             <div className="text-xs text-[var(--muted-foreground)] mt-1">
               ID: {school.school_id}
             </div>
+            {isCHED && school.hei_ownership && (
+              <div className="text-xs text-[var(--muted-foreground)] mt-0.5">
+                {school.hei_ownership}
+              </div>
+            )}
           </div>
           <button
             onClick={onClose}
@@ -123,6 +169,9 @@ export default function SchoolDetail({ school, onClose }) {
         {/* Location */}
         <Section title="Location" icon={MapPin}>
           <div className="space-y-1">
+            {isTESDA && school.address && (
+              <Row label="Address" value={school.address} />
+            )}
             <Row label="Barangay" value={school.barangay} />
             <Row label="Municipality" value={school.municipality} />
             <Row label="Province" value={school.province} />
@@ -139,75 +188,86 @@ export default function SchoolDetail({ school, onClose }) {
           </div>
         </Section>
 
-        {/* Coordinate Lineage */}
+        {/* Coordinate Lineage — DepEd: full detail; CHED/TESDA: simplified */}
         <Section title="Coordinate Lineage" icon={Eye}>
           {hasCoords ? (
-            <div className="space-y-2">
-              <div className="rounded-lg border border-[var(--border)] p-3 space-y-2">
-                <div className="text-xs font-medium">
-                  {SOURCE_LABELS[school.coord_source] || school.coord_source || "Unknown source"}
+            isDepEd ? (
+              <div className="space-y-2">
+                <div className="rounded-lg border border-[var(--border)] p-3 space-y-2">
+                  <div className="text-xs font-medium">
+                    {SOURCE_LABELS[school.coord_source] || school.coord_source || "Unknown source"}
+                  </div>
+                  {trust && (
+                    <div className="flex items-center gap-2">
+                      <Badge variant={trust.variant}>Trust: {trust.level}</Badge>
+                    </div>
+                  )}
+                  {trust && (
+                    <div className="text-[11px] text-[var(--muted-foreground)]">
+                      {trust.desc}
+                    </div>
+                  )}
+                  {school.monitoring_chosen_source && (
+                    <div className="mt-2 pt-2 border-t border-[var(--border)]">
+                      <div className="text-[11px] text-[var(--muted-foreground)] flex items-center gap-1">
+                        <ArrowRight className="h-3 w-3" />
+                        {MONITORING_SUB_LABELS[school.monitoring_chosen_source] ||
+                          `Validator chose: ${school.monitoring_chosen_source}`}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                {trust && (
-                  <div className="flex items-center gap-2">
-                    <Badge variant={trust.variant}>Trust: {trust.level}</Badge>
-                  </div>
-                )}
-                {trust && (
-                  <div className="text-[11px] text-[var(--muted-foreground)]">
-                    {trust.desc}
-                  </div>
-                )}
-                {school.monitoring_chosen_source && (
-                  <div className="mt-2 pt-2 border-t border-[var(--border)]">
-                    <div className="text-[11px] text-[var(--muted-foreground)] flex items-center gap-1">
-                      <ArrowRight className="h-3 w-3" />
-                      {MONITORING_SUB_LABELS[school.monitoring_chosen_source] ||
-                        `Validator chose: ${school.monitoring_chosen_source}`}
+                {school.sources_available && (
+                  <div>
+                    <div className="text-[11px] text-[var(--muted-foreground)] mb-1">
+                      Available in {school.sources_available.split(",").length} source(s):
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {school.sources_available.split(",").map((src) => (
+                        <Badge
+                          key={src}
+                          variant={src === school.coord_source ? "green" : "default"}
+                        >
+                          {src === school.coord_source && <CheckCircle2 className="h-3 w-3" />}
+                          {src.trim()}
+                        </Badge>
+                      ))}
                     </div>
                   </div>
                 )}
               </div>
-
-              {school.sources_available && (
-                <div>
-                  <div className="text-[11px] text-[var(--muted-foreground)] mb-1">
-                    Available in {school.sources_available.split(",").length} source(s):
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {school.sources_available.split(",").map((src) => (
-                      <Badge
-                        key={src}
-                        variant={src === school.coord_source ? "green" : "default"}
-                      >
-                        {src === school.coord_source && <CheckCircle2 className="h-3 w-3" />}
-                        {src.trim()}
-                      </Badge>
-                    ))}
-                  </div>
+            ) : (
+              <div className="rounded-lg border border-[var(--border)] p-3">
+                <div className="text-xs font-medium">
+                  {isCHED ? "CHED official data" : "TESDA official data"}
                 </div>
-              )}
-            </div>
+                <div className="text-[11px] text-[var(--muted-foreground)] mt-1">
+                  Coordinates from the {isCHED ? "CHED" : "TESDA"} source file.
+                </div>
+              </div>
+            )
           ) : (
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-1">
               <div className="text-xs font-medium text-amber-800">No coordinates available</div>
               <div className="text-[11px] text-amber-700">
-                {school.coord_rejection_reason === "no_submission"
-                  ? "This school did not submit coordinates in the TOSF data collection."
-                  : school.coord_rejection_reason === "not_in_lis"
-                  ? "This school was found in enrollment data but is not in the LIS master list."
-                  : school.coord_rejection_reason === "invalid"
-                  ? "Submitted coordinates were invalid (non-numeric, out of range, or zero)."
-                  : school.coord_rejection_reason === "out_of_bounds"
-                  ? "Submitted coordinates fell outside the Philippines bounding box."
-                  : school.sources_available === "enrollment_only"
-                  ? "This school is known only from enrollment data — no coordinate source has data for it."
-                  : "No coordinate source has data for this school."}
+                {isDepEd
+                  ? (school.coord_rejection_reason === "no_submission"
+                    ? "This school did not submit coordinates in the TOSF data collection."
+                    : school.coord_rejection_reason === "not_in_lis"
+                    ? "This school was found in enrollment data but is not in the LIS master list."
+                    : school.coord_rejection_reason === "invalid"
+                    ? "Submitted coordinates were invalid (non-numeric, out of range, or zero)."
+                    : school.coord_rejection_reason === "out_of_bounds"
+                    ? "Submitted coordinates fell outside the Philippines bounding box."
+                    : "No coordinate source has data for this school.")
+                  : `No valid coordinates in the ${isCHED ? "CHED" : "TESDA"} source file.`
+                }
               </div>
             </div>
           )}
 
-          {/* Coord status (both sectors) */}
-          {school.coord_status && school.coord_status === "suspect" && (
+          {/* Coord status warnings (DepEd only — these suspect categories don't apply to CHED/TESDA) */}
+          {isDepEd && school.coord_status === "suspect" && (
             <div className="rounded-lg border border-red-200 bg-red-50 p-3 space-y-1">
               <div className="text-xs font-medium text-red-800">Suspect coordinates</div>
               <div className="text-[11px] text-red-700">
@@ -225,45 +285,59 @@ export default function SchoolDetail({ school, onClose }) {
               </div>
             </div>
           )}
-          {school.coord_status === "fixed_swap" && (
+          {isDepEd && school.coord_status === "fixed_swap" && (
             <div className="text-[11px] text-[var(--muted-foreground)]">
               <b>Note:</b> Latitude and longitude were swapped in the original submission and auto-corrected.
             </div>
           )}
         </Section>
 
-        {/* GASTPE (private only) */}
-        {!isPublic && (
+        {/* CHED — Academic Offerings */}
+        {isCHED && (
+          <Section title="Academic Offerings" icon={BookOpen}>
+            <TagList items={school.discipline_groups} />
+          </Section>
+        )}
+
+        {/* TESDA — Institution Details + Program Sectors */}
+        {isTESDA && (
+          <>
+            <Section title="Institution Details" icon={Building2}>
+              <div className="space-y-1">
+                <Row label="Type" value={school.type_of_institution} />
+                <Row label="Classification" value={school.classification} />
+                <Row label="Role" value={school.institution_classification} />
+              </div>
+            </Section>
+            <Section title="Program Sectors" icon={Wrench}>
+              <TagList items={school.program_sectors} />
+            </Section>
+          </>
+        )}
+
+        {/* GASTPE (DepEd private only) */}
+        {!isPublic && isDepEd && (
           <Section title="GASTPE Participation" icon={GraduationCap}>
             <div className="space-y-1">
-              <Row
-                label="ESC"
-                value={school.esc_participating === 1 ? "Participating" : "No"}
-              />
-              <Row
-                label="SHS VP"
-                value={school.shsvp_participating === 1 ? "Participating" : "No"}
-              />
-              <Row
-                label="JDVP"
-                value={school.jdvp_participating === 1 ? "Participating" : "No"}
-              />
+              <Row label="ESC" value={school.esc_participating === 1 ? "Participating" : "No"} />
+              <Row label="SHS VP" value={school.shsvp_participating === 1 ? "Participating" : "No"} />
+              <Row label="JDVP" value={school.jdvp_participating === 1 ? "Participating" : "No"} />
             </div>
           </Section>
         )}
 
-        {/* Enrollment */}
-        <Section title="Enrollment Status" icon={Users}>
-          <div className="text-sm">
-            {school.enrollment_status === "active" ? (
-              <span className="text-green-700">Has reported enrollment in SY 2024-2025</span>
-            ) : (
-              <span className="text-amber-700">
-                No reported enrollment in SY 2024-2025
-              </span>
-            )}
-          </div>
-        </Section>
+        {/* Enrollment (DepEd only) */}
+        {isDepEd && (
+          <Section title="Enrollment Status" icon={Users}>
+            <div className="text-sm">
+              {school.enrollment_status === "active" ? (
+                <span className="text-green-700">Has reported enrollment in SY 2024-2025</span>
+              ) : (
+                <span className="text-amber-700">No reported enrollment in SY 2024-2025</span>
+              )}
+            </div>
+          </Section>
+        )}
       </div>
     </div>
   );
