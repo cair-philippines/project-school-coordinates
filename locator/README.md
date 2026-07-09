@@ -1,6 +1,6 @@
-# Piring — School Locator
+# Piring — Institution Locator
 
-Interactive web application for searching and visualizing Philippine public and private school locations. Built on the unified coordinates datasets produced by this project's pipelines. "Piring" means blindfold in Filipino — the app reveals what's hidden in the data.
+Interactive web application for searching and visualizing Philippine educational institutions across DepEd (public and private schools), CHED (higher education institutions), and TESDA (technical-vocational training and assessment centers). Built on the unified coordinates datasets produced by this project's pipelines. "Piring" means blindfold in Filipino — the app reveals what's hidden in the data.
 
 ## Features
 
@@ -11,20 +11,23 @@ Interactive web application for searching and visualizing Philippine public and 
   - **Schools** — scrollable results list with school name, location, sector, and coordinate status badges
   - **Overview** — summary stats: total schools, public/private split, coordinate coverage %, coordinate status distribution bar (valid/suspect/no coords), and coordinate sources bar
 - **Interactive map** — Leaflet map with three base layers (Light, OpenStreetMap, Satellite), coord-status-aware colored markers, context-aware zoom, proportional sector sampling, IQR-based outlier-robust bounds
-- **Coord-status-aware markers** — 5 distinct visual indicators:
-  - Solid green dot — public school, valid coordinates
-  - Solid blue dot — private school, valid coordinates
-  - Green/blue dot + static orange ring — wrong municipality or round coordinates (needs investigation)
-  - Green/blue dot + pulsing red ring — outside all polygons (almost certainly wrong)
-  - Green/blue dot + red X — known fake coordinate (placeholder default or cluster)
-  - Gray dot — unknown coord_status
-- **Map legend** — collapsible legend in the bottom-left corner showing all dot visual types
-- **Table view** — togglable tabular view showing all matching schools including those without coordinates (invisible on the map). Sortable columns (click header to cycle asc/desc/clear): ID, name, sector, municipality, province, region, coord status, PSGC validation, enrollment status. Click a row to locate on the map (or zoom to locality if no coordinates).
+- **Sector toggles** — DepEd institutions are always visible; CHED and TESDA default off and must be activated via pill buttons in the toolbar. Toggling a sector hides/shows it in both the map and results list without re-querying the API.
+- **Sector-aware markers** — 5 distinct colors:
+  - Solid green dot — DepEd public school
+  - Solid blue dot — DepEd private school
+  - Solid violet dot — CHED public (SUC / LUC / Special HEI)
+  - Solid light-violet dot — CHED private (Sectarian / Non-Sectarian)
+  - Solid orange dot — TESDA institution
+  - Coord-status overlays (ring / pulse / ×) apply to DepEd schools only; CHED and TESDA coordinates are considered authoritative
+- **Sector badges** — results list and detail panel show a colored sector badge (DepEd / CHED / TESDA) per institution
+- **Sector-aware detail panels** — DepEd: full coordinate lineage, GASTPE flags, enrollment status; CHED: academic discipline groups; TESDA: institution classification and program sectors
+- **Map legend** — collapsible legend in the bottom-left corner showing all sector colors and coord-status overlays
+- **Table view** — togglable tabular view showing all matching institutions including those without coordinates (invisible on the map). Sortable columns (click header to cycle asc/desc/clear): ID, name, sector, municipality, province, region, coord status, PSGC validation, enrollment status. Click a row to locate on the map (or zoom to locality if no coordinates).
 - **School popups** — clicking a school dot shows a popup with labeled fields (Barangay, City/Muni, Province, Region), coordinates, and source. Includes a "View Details →" link to open the full detail panel.
 - **School detail panel** — overlay panel with full school profile: location hierarchy, coordinate lineage (source, trust level, validator notes), suspect coordinate alert with plain-English explanation, GASTPE flags, enrollment status
 - **Coordinate lineage inspector** — for each school, shows which source provided coordinates, trust level, available sources, and for monitoring-validated schools, which sub-source the validator chose
 - **Base map toggle** — three tile layers: Light (CARTO, default), OpenStreetMap, and Satellite (Esri World Imagery). Layers control at bottom-right.
-- **Stats bar** — live summary of total schools, public/private split, coordinate coverage, active enrollment
+- **Stats bar** — live summary of total institutions, DepEd public, DepEd private, CHED, TESDA counts, and coordinate coverage
 
 ## Architecture
 
@@ -43,7 +46,7 @@ Browser
               │
               ▼
         FastAPI backend (Python)
-              └── loads parquet files at startup (~61K schools in memory)
+              └── loads parquet files at startup (~70K institutions in memory)
 ```
 
 Single container for deployment. The backend serves both the API and the built React static files.
@@ -163,24 +166,35 @@ Location column values are normalized at data load time: title case for province
 
 ### Map Marker Capping
 
-The map caps rendered markers at 3,000 for performance. When results exceed this cap, markers are **sampled proportionally by sector** — if a region has 64% public and 36% private schools, the marker sample preserves that ratio. This prevents one sector from visually disappearing due to load order.
+The map caps rendered markers at 3,000 for performance. When results exceed this cap, markers are **sampled proportionally by sector** across all five sector types — the sample preserves each sector's relative share of the visible result set. This prevents any one sector from visually disappearing due to load order.
+
+Only sectors currently toggled on contribute to the visible result set. CHED and TESDA markers default off, so capping only applies when those toggles are active.
 
 Bounds calculation always uses the full (uncapped) result set to ensure correct zoom behavior.
 
-### Coord-Status-Aware Markers
+### Sector Colors and Coord-Status Overlays
 
-Map markers reflect `coord_status` and `coord_rejection_reason`:
+All five sector types have a distinct base color:
 
-| Visual | coord_status | coord_rejection_reason | Meaning |
+| Sector | Color |
+|---|---|
+| DepEd public | Green |
+| DepEd private | Blue |
+| CHED public (SUC/LUC/Special HEI) | Violet |
+| CHED private (Sectarian/Non-Sectarian) | Light violet |
+| TESDA | Orange |
+
+Coord-status overlays apply **only to DepEd schools** (CHED and TESDA coordinates are considered authoritative source data):
+
+| Overlay | coord_status | coord_rejection_reason | Meaning |
 |---|---|---|---|
-| Solid green dot | `valid` / `fixed_swap` | — | Public school, confident coordinates |
-| Solid blue dot | `valid` / `fixed_swap` | — | Private school, confident coordinates |
-| Green/blue + orange ring | `suspect` | `wrong_municipality` or `round_coordinates` | Needs investigation |
-| Green/blue + pulsing red ring | `suspect` | `outside_all_polygons` | Almost certainly wrong (over water, outside land) |
-| Green/blue + red X | `suspect` | `placeholder_default` or `coordinate_cluster` | Known fake coordinate |
+| No overlay | `valid` / `fixed_swap` | — | Confident coordinates |
+| Static orange ring | `suspect` | `wrong_municipality` or `round_coordinates` | Needs investigation |
+| Pulsing red ring | `suspect` | `outside_all_polygons` | Almost certainly wrong (over water, outside land) |
+| Red × | `suspect` | `placeholder_default` or `coordinate_cluster` | Known fake coordinate |
 | Gray dot | null/unknown | — | No coord_status data |
 
-The sector color (green=public, blue=private) is always visible as the center dot. The ring/X/pulse overlay indicates the severity and type of coordinate issue.
+The sector color is always visible as the center dot. The ring/×/pulse overlay indicates the severity and type of coordinate issue.
 
 ### NCR Sub-District Normalization
 

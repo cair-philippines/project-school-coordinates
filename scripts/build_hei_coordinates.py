@@ -6,7 +6,7 @@ and gold (one row per HEI campus with coordinates).
 Pipeline steps:
   1. Load bronze Excel
   2. Normalize localities: capture old_* values, harmonize to DepEd naming
-  3. Build silver: normalized HEI × program table (22,473 rows)
+  3. Build silver: normalized HEI × program table
   4. Build gold: deduplicate to one row per HEI campus
   5. Attach PSGC: point-in-polygon spatial lookup (all 4 admin levels)
   6. Write outputs + report + metrics
@@ -37,7 +37,7 @@ SOURCE_FILE = (
     / "data"
     / "bronze"
     / "frozen"
-    / "HEIs_with_Regions_latlong_Programs_Disciplines.xlsx"
+    / "Annex A - CHED Template of the Requested Data_Table.xlsx"
 )
 SHAPEFILE_PATH = (
     PROJECT_ROOT
@@ -53,21 +53,25 @@ OUTPUT_REPORT_DIR = PROJECT_ROOT / "output"
 LAT_MIN, LAT_MAX = 4.5, 21.5
 LON_MIN, LON_MAX = 116.0, 127.0
 
-# HEI numeric region format → DepEd Roman numeral convention
+# HEI region format → DepEd convention (new file uses "NN - Name" style)
 REGION_MAP = {
-    "Region 01": "Region I",
-    "Region 02": "Region II",
-    "Region 03": "Region III",
-    "Region 04-A": "Region IV-A",
-    "Region 04-B": "MIMAROPA",
-    "Region 05": "Region V",
-    "Region 06": "Region VI",
-    "Region 07": "Region VII",
-    "Region 08": "Region VIII",
-    "Region 09": "Region IX",
-    "Region 10": "Region X",
-    "Region 11": "Region XI",
-    "Region 12": "Region XII",
+    "01 - Ilocos Region": "Region I",
+    "02 - Cagayan Valley": "Region II",
+    "03 - Central Luzon": "Region III",
+    "04 - CALABARZON": "Region IV-A",
+    "05 - Bicol Region": "Region V",
+    "06 - Western Visayas": "Region VI",
+    "07 - Central Visayas": "Region VII",
+    "08 - Eastern Visayas": "Region VIII",
+    "09 - Zamboanga Peninsula": "Region IX",
+    "10 - Northern Mindanao": "Region X",
+    "11 - Davao Region": "Region XI",
+    "12 - Soccsksargen": "Region XII",
+    "13 - Nat. Capital Region": "NCR",
+    "14 - Cordillera Adm. Region": "CAR",
+    "16 - Caraga": "CARAGA",
+    "17 - MIMAROPA": "MIMAROPA",
+    "18 - Negros Island Region": "NIR",
 }
 
 # Province name fixes: CHED label → DepEd label
@@ -83,40 +87,33 @@ PROVINCE_MAP = {
 # ---------------------------------------------------------------------------
 def load_bronze():
     print(f"Loading bronze: {SOURCE_FILE.name}")
-    raw = pd.read_excel(SOURCE_FILE)
+    # Row 1: blank, Row 2: title ("AY 2024-2025 HEI Coordinates"), Row 3: headers
+    # Column A is unnamed/empty — skip via usecols
+    raw = pd.read_excel(SOURCE_FILE, skiprows=2, usecols=list(range(1, 12)))
     print(f"  Raw rows: {len(raw):,}")
 
     raw = raw.rename(
         columns={
+            "Unique Institutional Identifier (UII)": "uii_code",
             "Name of HEI": "name",
             "Region": "region",
             "Province": "province",
-            "City and Municipality": "city_municipality",
+            "City/Municipality2": "city_municipality",
             "Sector": "sector",
-            "Curriculum": "curriculum",
             "Longitude": "longitude",
             "Latitude": "latitude",
-            "Sheet1 (2).Unique Institutional Identifier (UII) Code": "uii_code",
-            "Sheet1 (2).Program level": "program_level",
-            "Sheet1 (2).Discipline Group": "discipline_group",
-            "Sheet1 (2).PSCEd/ Program Name": "program_name",
+            "Program Level": "program_level",
+            "Discipline Group": "discipline_group",
+            "PSCED/Program Name": "program_name",
         }
     )
 
-    # Fix Mojibake in string columns (ñ stored as Latin-1 read as UTF-8)
     str_cols = [
         "name", "region", "province", "city_municipality", "sector",
-        "curriculum", "discipline_group", "program_name",
+        "discipline_group", "program_name",
     ]
     for col in str_cols:
-        raw[col] = (
-            raw[col]
-            .astype(str)
-            .str.encode("latin-1", errors="replace")
-            .str.decode("utf-8", errors="replace")
-            .str.strip()
-        )
-        raw[col] = raw[col].replace("nan", None)
+        raw[col] = raw[col].astype(str).str.strip().replace("nan", None)
 
     raw["uii_code"] = raw["uii_code"].astype(str).str.strip().replace("nan", None)
     return raw
@@ -185,7 +182,7 @@ def build_silver(raw):
             "region", "old_region",
             "province", "old_province",
             "city_municipality", "old_city_municipality",
-            "sector", "curriculum", "latitude", "longitude",
+            "sector", "latitude", "longitude",
             "program_level", "discipline_group", "program_name",
         ]
     ].copy()
@@ -374,7 +371,7 @@ def write_gold(gold):
         {"field": "PSGC NOTE", "value": "All PSGC codes are spatially observed — no administrative PSGC crosswalk exists for HEIs. No psgc_validation column is produced (nothing to compare against)."},
         {"field": "LOCALITY NOTE", "value": "old_* columns preserve the original CHED strings. region/province/city_municipality are harmonized to DepEd naming so joins across basic and higher education work without an extra layer."},
         {"field": "MULTI-CAMPUS NOTE", "value": "Some UII codes appear under two different codes in the CHED source (e.g., Stella Maris College: 10085 and 13191). This is a CHED data issue and is preserved as-is."},
-        {"field": "RELATED FILE", "value": "data/silver/hei_programs.parquet — full HEI x program mapping (22,473 rows)"},
+        {"field": "RELATED FILE", "value": "data/silver/hei_programs.parquet — full HEI x program mapping (25,058 rows, AY 2024-2025)"},
     ])
 
     with pd.ExcelWriter(xlsx_path, engine="openpyxl") as writer:

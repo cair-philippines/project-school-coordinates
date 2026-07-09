@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse
 from typing import Optional
 import data_loader
 
-app = FastAPI(title="School Locator API", version="1.0.0")
+app = FastAPI(title="Institution Locator API", version="2.0.0")
 
 
 def _match(value, query):

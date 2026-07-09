@@ -1,52 +1,56 @@
 {
   "coord_status": {
-    "valid": 2422
+    "valid": 2321
   },
-  "generated_at": "2026-05-18T05:07:10+00:00",
-  "gold_campus_count": 2422,
+  "generated_at": "2026-07-09T09:45:42+00:00",
+  "gold_campus_count": 2321,
   "locality_harmonization": {
     "city_municipality_changed": 1,
-    "province_changed": 29,
-    "region_changed": 1872
+    "province_changed": 20,
+    "region_changed": 2321
   },
-  "multi_campus_count": 8,
-  "null_uii_count": 460,
+  "multi_campus_count": 0,
+  "null_uii_count": 1,
   "pipeline": "hei",
   "program_level": {
-    "Baccalaureate": 16422,
-    "Doctorate": 919,
-    "Master's": 2954,
-    "Post-baccalaureate": 332,
-    "Pre-baccalaureate": 1385,
-    "__null__": 461
+    "5 - Short-cycle tertiary education": 1239,
+    "6 - Bachelor level education or equivalent": 18793,
+    "7 - Master level education or equivalent": 3634,
+    "8 - Doctoral level education or equivalent": 1126,
+    "Post-Baccalaureate": 262,
+    "__null__": 4
   },
-  "psgc_matched": 2418,
-  "psgc_outside_polygons": 4,
+  "psgc_matched": 2300,
+  "psgc_outside_polygons": 21,
   "region": {
-    "BARMM": 111,
     "CAR": 52,
     "CARAGA": 56,
-    "MIMAROPA": 93,
-    "NCR": 331,
-    "Region I": 109,
+    "MIMAROPA": 92,
+    "NCR": 313,
+    "NIR": 88,
+    "Region I": 113,
     "Region II": 70,
-    "Region III": 256,
-    "Region IV-A": 359,
-    "Region IX": 92,
-    "Region V": 173,
-    "Region VI": 153,
-    "Region VII": 168,
-    "Region VIII": 85,
-    "Region X": 107,
-    "Region XI": 105,
-    "Region XII": 102
+    "Region III": 255,
+    "Region IV-A": 365,
+    "Region IX": 89,
+    "Region V": 183,
+    "Region VI": 102,
+    "Region VII": 137,
+    "Region VIII": 89,
+    "Region X": 110,
+    "Region XI": 106,
+    "Region XII": 100,
+    "__null__": 1
   },
   "sector": {
-    "OGS": 13,
-    "Private": 1727,
-    "Public LUC": 136,
-    "Public SUC Main": 114,
-    "Public SUC Satellite": 432
+    "LUC": 54,
+    "LUC with Institutional Recognition": 108,
+    "Private Non-Sectarian": 1282,
+    "Private Sectarian": 340,
+    "SUC Main": 108,
+    "SUC Satellite": 424,
+    "Special HEI": 4,
+    "__null__": 1
   },
-  "silver_row_count": 22473
+  "silver_row_count": 25058
 }

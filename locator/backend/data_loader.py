@@ -6,7 +6,7 @@ import pandas as pd
 
 LOCATION_COLS = ["region", "province", "municipality", "barangay"]
 
-PUBLIC_HEI_SECTORS = {"Public SUC Main", "Public SUC Satellite", "Public LUC", "OGS"}
+PUBLIC_HEI_SECTORS = {"SUC Main", "SUC Satellite", "LUC", "LUC with Institutional Recognition", "Special HEI"}
 
 
 def _title_case(val):
