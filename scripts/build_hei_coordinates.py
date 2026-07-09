@@ -39,6 +39,22 @@ SOURCE_FILE = (
     / "frozen"
     / "Annex A - CHED Template of the Requested Data_Table.xlsx"
 )
+V1_SOURCE_FILE = (
+    PROJECT_ROOT
+    / "data"
+    / "bronze"
+    / "frozen"
+    / "HEIs_with_Regions_latlong_Programs_Disciplines.xlsx"
+)
+
+# v1 → v2 sector vocabulary mapping (used for BARMM backfill only)
+V1_SECTOR_MAP = {
+    "Private": "Private Non-Sectarian",
+    "Public SUC Main": "SUC Main",
+    "Public SUC Satellite": "SUC Satellite",
+    "Public LUC": "LUC",
+    "OGS": "Special HEI",
+}
 SHAPEFILE_PATH = (
     PROJECT_ROOT
     / "data"
@@ -80,6 +96,16 @@ PROVINCE_MAP = {
     "COTABATO": "NORTH COTABATO",
     "QUEZON PROVINCE": "QUEZON",
 }
+
+
+def _fix_mojibake(s):
+    """Decode Latin-1 bytes misread as UTF-8 (v1 source file issue only)."""
+    if not isinstance(s, str):
+        return s
+    try:
+        return s.encode("latin-1").decode("utf-8")
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        return s
 
 
 # ---------------------------------------------------------------------------
@@ -235,6 +261,7 @@ def build_gold(silver):
     gold.loc[uii_campus_counts[uii_campus_counts > 1].index, "is_multi_campus"] = True
 
     gold = gold.sort_values(["region", "name"]).reset_index(drop=True)
+    gold["source_vintage"] = "v2"
 
     print(f"\nGold: {len(gold):,} HEI campuses")
     print(f"  Valid coordinates:   {(gold['coord_status'] == 'valid').sum():,}")
@@ -243,6 +270,98 @@ def build_gold(silver):
     print(f"  Multi-campus:        {gold['is_multi_campus'].sum():,}")
 
     return gold
+
+
+# ---------------------------------------------------------------------------
+# Step 4b: BARMM backfill from v1 source (absent in v2)
+# ---------------------------------------------------------------------------
+def build_barmm_backfill():
+    """Load BARMM HEI campuses from the v1 source file.
+
+    BARMM is entirely absent from the AY 2024-2025 (v2) source. This function
+    extracts BARMM records from the older file, applies the v1-specific mojibake
+    fix, maps v1 sector labels to v2 equivalents, and returns a campus-level
+    DataFrame in the same schema as build_gold() — tagged source_vintage='v1_barmm_backfill'.
+
+    Silver is NOT updated (no program-level data for v1 BARMM rows is carried forward).
+    """
+    if not V1_SOURCE_FILE.exists():
+        print("\nWARNING: v1 source file not found — BARMM backfill skipped.")
+        return None
+
+    print(f"\nLoading BARMM backfill from v1: {V1_SOURCE_FILE.name}")
+    raw = pd.read_excel(V1_SOURCE_FILE, sheet_name="Merge1")
+
+    raw = raw.rename(columns={
+        "Sheet1 (2).Unique Institutional Identifier (UII) Code": "uii_code",
+        "Name of HEI": "name",
+        "Region": "region",
+        "Province": "province",
+        "City and Municipality": "city_municipality",
+        "Sector": "sector",
+        "Longitude": "longitude",
+        "Latitude": "latitude",
+    })
+
+    str_cols = ["name", "region", "province", "city_municipality", "sector"]
+    for col in str_cols:
+        raw[col] = raw[col].astype(str).str.strip().replace("nan", None)
+        raw[col] = raw[col].apply(_fix_mojibake)
+    raw["uii_code"] = raw["uii_code"].astype(str).str.strip().replace("nan", None)
+
+    barmm = raw[raw["region"] == "BARMM"].copy()
+    print(f"  BARMM rows in v1 (program-level): {len(barmm):,}")
+
+    if len(barmm) == 0:
+        print("  No BARMM rows found — backfill skipped.")
+        return None
+
+    # BARMM region is already in DepEd format; old_* = same as canonical
+    barmm["old_region"] = barmm["region"]
+    barmm["old_province"] = barmm["province"]
+    barmm["old_city_municipality"] = barmm["city_municipality"]
+
+    # Translate v1 sector labels to v2 vocabulary
+    barmm["sector"] = barmm["sector"].replace(V1_SECTOR_MAP)
+
+    barmm_gold = (
+        barmm[[
+            "uii_code", "name",
+            "region", "old_region",
+            "province", "old_province",
+            "city_municipality", "old_city_municipality",
+            "sector", "latitude", "longitude",
+        ]]
+        .drop_duplicates(subset=["name", "latitude", "longitude"])
+        .reset_index(drop=True)
+    )
+
+    barmm_gold["coord_status"] = "valid"
+    oob_mask = (
+        (barmm_gold["latitude"] < LAT_MIN) | (barmm_gold["latitude"] > LAT_MAX)
+        | (barmm_gold["longitude"] < LON_MIN) | (barmm_gold["longitude"] > LON_MAX)
+    )
+    barmm_gold.loc[oob_mask, "coord_status"] = "out_of_bounds"
+
+    barmm_gold["is_multi_campus"] = False
+    uii_counts = (
+        barmm_gold[barmm_gold["uii_code"].notna()]
+        .groupby("uii_code")["name"]
+        .transform("count")
+    )
+    multi_idx = uii_counts[uii_counts > 1].index
+    if len(multi_idx) > 0:
+        barmm_gold.loc[multi_idx, "is_multi_campus"] = True
+
+    barmm_gold["source_vintage"] = "v1_barmm_backfill"
+
+    print(f"  BARMM campuses (gold):  {len(barmm_gold):,}")
+    print(f"  Valid coordinates:      {(barmm_gold['coord_status'] == 'valid').sum():,}")
+    print(f"  Out-of-bounds:          {(barmm_gold['coord_status'] == 'out_of_bounds').sum():,}")
+    print(f"  Null UII:               {barmm_gold['uii_code'].isna().sum():,}")
+    print(f"  Multi-campus:           {barmm_gold['is_multi_campus'].sum():,}")
+
+    return barmm_gold
 
 
 # ---------------------------------------------------------------------------
@@ -363,6 +482,7 @@ def write_gold(gold):
         {"field": "longitude", "value": "Longitude (WGS84)"},
         {"field": "coord_status", "value": "valid = within PH bounding box [4.5-21.5, 116-127]; out_of_bounds = outside bounds"},
         {"field": "is_multi_campus", "value": "True if this UII code appears at more than one distinct location"},
+        {"field": "source_vintage", "value": "v2 = AY 2024-2025 CHED file (primary source); v1_barmm_backfill = BARMM campuses carried forward from the earlier CHED file (absent in v2)"},
         {"field": "psgc_observed_region", "value": "PSGC region code — from point-in-polygon against PSA shapefile"},
         {"field": "psgc_observed_province", "value": "PSGC province code — from point-in-polygon"},
         {"field": "psgc_observed_municity", "value": "PSGC municipality/city code (7-digit) — from point-in-polygon"},
@@ -371,7 +491,8 @@ def write_gold(gold):
         {"field": "PSGC NOTE", "value": "All PSGC codes are spatially observed — no administrative PSGC crosswalk exists for HEIs. No psgc_validation column is produced (nothing to compare against)."},
         {"field": "LOCALITY NOTE", "value": "old_* columns preserve the original CHED strings. region/province/city_municipality are harmonized to DepEd naming so joins across basic and higher education work without an extra layer."},
         {"field": "MULTI-CAMPUS NOTE", "value": "Some UII codes appear under two different codes in the CHED source (e.g., Stella Maris College: 10085 and 13191). This is a CHED data issue and is preserved as-is."},
-        {"field": "RELATED FILE", "value": "data/silver/hei_programs.parquet — full HEI x program mapping (25,058 rows, AY 2024-2025)"},
+        {"field": "RELATED FILE", "value": "data/silver/hei_programs.parquet — full HEI x program mapping (25,058 rows, AY 2024-2025). Note: silver does not include BARMM backfill rows (no program-level data in v1 for BARMM)."},
+        {"field": "BARMM NOTE", "value": "BARMM campuses are absent from the v2 source file. They are backfilled from the earlier CHED file (v1) and tagged source_vintage='v1_barmm_backfill'. Sector labels translated from v1 to v2 vocabulary: Private→Private Non-Sectarian, Public SUC Main→SUC Main, Public SUC Satellite→SUC Satellite, Public LUC→LUC, OGS→Special HEI."},
     ])
 
     with pd.ExcelWriter(xlsx_path, engine="openpyxl") as writer:
@@ -394,15 +515,21 @@ def write_report(silver, gold):
     null_uii = int(gold["uii_code"].isna().sum())
     psgc_matched = int(gold["psgc_observed_barangay"].notna().sum())
 
+    v2_count = int((gold["source_vintage"] == "v2").sum()) if "source_vintage" in gold.columns else total
+    barmm_count = int((gold["source_vintage"] == "v1_barmm_backfill").sum()) if "source_vintage" in gold.columns else 0
+
     lines = [
         "=" * 60,
         "HEI COORDINATES — BUILD REPORT",
         "=" * 60,
         f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-        f"Source:    {SOURCE_FILE.name}",
+        f"Source (v2): {SOURCE_FILE.name}",
+        f"Source (v1): {V1_SOURCE_FILE.name} (BARMM backfill only)",
         "",
-        f"Silver (HEI × program): {len(silver):,} rows",
+        f"Silver (HEI × program): {len(silver):,} rows (v2 only)",
         f"Gold (HEI campuses):    {total:,}",
+        f"  v2 (AY 2024-2025):      {v2_count:,}",
+        f"  v1 BARMM backfill:      {barmm_count:,}",
         "",
         "Coordinate status:",
         f"  valid:          {valid:,}",
@@ -446,11 +573,15 @@ def write_metrics(silver, gold):
         vc = series.fillna("__null__").value_counts().to_dict()
         return {str(k): int(v) for k, v in vc.items()}
 
+    barmm_backfill_count = int((gold["source_vintage"] == "v1_barmm_backfill").sum()) if "source_vintage" in gold.columns else 0
+
     metrics = {
         "pipeline": "hei",
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "silver_row_count": int(len(silver)),
         "gold_campus_count": int(len(gold)),
+        "barmm_backfill_count": barmm_backfill_count,
+        "source_vintage": _vc(gold.get("source_vintage")),
         "coord_status": _vc(gold["coord_status"]),
         "psgc_matched": int(gold["psgc_observed_barangay"].notna().sum()),
         "psgc_outside_polygons": int(gold["psgc_observed_barangay"].isna().sum()),
@@ -484,6 +615,13 @@ def main():
     raw = normalize_localities(raw)
     silver = build_silver(raw)
     gold = build_gold(silver)
+
+    barmm_gold = build_barmm_backfill()
+    if barmm_gold is not None:
+        gold = pd.concat([gold, barmm_gold], ignore_index=True)
+        gold = gold.sort_values(["region", "name"]).reset_index(drop=True)
+        print(f"\nCombined gold (v2 + BARMM backfill): {len(gold):,} campuses")
+
     gold = attach_psgc(gold)
     write_gold(gold)
     write_report(silver, gold)

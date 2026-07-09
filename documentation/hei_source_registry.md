@@ -177,3 +177,35 @@ mapped to `"NIR"`. BARMM is absent from this vintage entirely.
 | BARMM campuses | 111 | 0 | −111 |
 | NIR campuses | 0 | 88 | +88 |
 | Outside polygons | 4 | 20 | +16 |
+
+---
+
+## BARMM Backfill (applied 2026-07-09)
+
+BARMM is absent from the AY 2024-2025 source. To preserve coverage, the 111 BARMM campuses
+from v1 are backfilled into the gold output. Silver is not updated (no program-level rows are
+carried forward). Backfilled records are tagged `source_vintage='v1_barmm_backfill'` in the
+gold table to make the provenance explicit.
+
+### Sector translation applied (v1 → v2 vocabulary)
+
+| v1 value | v2 value used in gold |
+|---|---|
+| `Private` | `Private Non-Sectarian` |
+| `Public SUC Main` | `SUC Main` |
+| `Public SUC Satellite` | `SUC Satellite` |
+| `Public LUC` | `LUC` |
+| `OGS` | `Special HEI` |
+
+Note: v1 does not distinguish Private Sectarian from Non-Sectarian. All v1 private BARMM
+campuses are mapped to `Private Non-Sectarian` as the closest equivalent.
+
+### Gold output stats after backfill (generated 2026-07-09)
+
+| Metric | v2 only | v2 + BARMM backfill | Change |
+|---|---|---|---|
+| Gold campuses | 2,321 | 2,432 | +111 |
+| BARMM campuses | 0 | 111 | +111 |
+| Null UIIs | 1 | 109 | +108 (BARMM had no UIIs in v1) |
+| PSGC matched | 2,300 / 2,321 | 2,408 / 2,432 | +108 matched |
+| Outside all polygons | 20 | 23 | +3 (3 BARMM campuses) |

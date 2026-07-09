@@ -1,16 +1,17 @@
 {
+  "barmm_backfill_count": 111,
   "coord_status": {
-    "valid": 2321
+    "valid": 2432
   },
-  "generated_at": "2026-07-09T09:45:42+00:00",
-  "gold_campus_count": 2321,
+  "generated_at": "2026-07-09T13:27:11+00:00",
+  "gold_campus_count": 2432,
   "locality_harmonization": {
     "city_municipality_changed": 1,
     "province_changed": 20,
     "region_changed": 2321
   },
   "multi_campus_count": 0,
-  "null_uii_count": 1,
+  "null_uii_count": 109,
   "pipeline": "hei",
   "program_level": {
     "5 - Short-cycle tertiary education": 1239,
@@ -20,9 +21,10 @@
     "Post-Baccalaureate": 262,
     "__null__": 4
   },
-  "psgc_matched": 2300,
-  "psgc_outside_polygons": 21,
+  "psgc_matched": 2408,
+  "psgc_outside_polygons": 24,
   "region": {
+    "BARMM": 111,
     "CAR": 52,
     "CARAGA": 56,
     "MIMAROPA": 92,
@@ -45,12 +47,16 @@
   "sector": {
     "LUC": 54,
     "LUC with Institutional Recognition": 108,
-    "Private Non-Sectarian": 1282,
+    "Private Non-Sectarian": 1367,
     "Private Sectarian": 340,
-    "SUC Main": 108,
-    "SUC Satellite": 424,
-    "Special HEI": 4,
+    "SUC Main": 113,
+    "SUC Satellite": 438,
+    "Special HEI": 11,
     "__null__": 1
   },
-  "silver_row_count": 25058
+  "silver_row_count": 25058,
+  "source_vintage": {
+    "v1_barmm_backfill": 111,
+    "v2": 2321
+  }
 }
